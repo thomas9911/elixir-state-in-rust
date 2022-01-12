@@ -1,14 +1,23 @@
-use crate::{SimpleValue, StringOrAtom};
+use im::HashMap;
 use rustler::{Env, Error, ListIterator, NifStruct, ResourceArc};
-use std::collections::HashMap;
+use shared::{SimpleValue, StringOrAtom};
 use std::sync::RwLock;
 
 type Value = SimpleValue;
 
 #[derive(NifStruct)]
-#[module = "ElixirStateInRust.Map"]
+#[module = "ElixirStateInRust.ImMap"]
 pub struct Map {
     reference: ResourceArc<HashMapResource>,
+}
+impl Map {
+    pub fn new(map: HashMap<String, Value>) -> Self {
+        Map {
+            reference: ResourceArc::new(HashMapResource {
+                data: RwLock::new(map),
+            }),
+        }
+    }
 }
 
 pub struct HashMapResource {
@@ -27,12 +36,7 @@ fn new() -> Map {
 #[rustler::nif]
 fn clone(map: Map) -> Map {
     let new_map = map.reference.data.read().unwrap();
-
-    Map {
-        reference: ResourceArc::new(HashMapResource {
-            data: RwLock::new(new_map.clone()),
-        }),
-    }
+    Map::new(new_map.clone())
 }
 
 #[rustler::nif(name = "new")]
@@ -46,20 +50,19 @@ fn new_with_list<'a>(list: ListIterator<'a>) -> Result<Map, Error> {
         }
     }
 
-    Ok(Map {
-        reference: ResourceArc::new(HashMapResource {
-            data: RwLock::new(hashmap),
-        }),
-    })
+    Ok(Map::new(hashmap))
 }
 
 #[rustler::nif]
 fn put(map: Map, key: StringOrAtom, value: Value) -> Map {
-    {
-        let mut data = map.reference.data.write().unwrap();
-        data.insert(key.to_string(), value);
-    }
-    map
+    let data = map
+        .reference
+        .data
+        .read()
+        .unwrap()
+        .update(key.to_string(), value);
+
+    Map::new(data)
 }
 
 #[rustler::nif(name = "_empty")]
@@ -77,11 +80,21 @@ fn contains(map: Map, key: String) -> bool {
     map.reference.data.read().unwrap().contains_key(&key)
 }
 
-#[rustler::nif(name = "pop")]
-fn pop(map: Map) -> Option<(String, Value)> {
-    let mut data = map.reference.data.write().unwrap();
-    let entry = data.keys().next().cloned()?;
-    data.remove_entry(&entry)
+#[rustler::nif]
+fn pop(map: Map) -> (Option<(String, Value)>, Map) {
+    let might_entry = {
+        let data = map.reference.data.read().unwrap();
+        data.keys().next().cloned()
+    };
+    if let Some(entry) = might_entry {
+        let mut data = map.reference.data.read().unwrap().clone();
+        let key_value = {
+            data.remove_with_key(&entry)
+        };
+        (key_value, Map::new(data))
+    } else {
+        (None, map)
+    }
 }
 
 #[rustler::nif]

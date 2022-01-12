@@ -1,22 +1,12 @@
-defmodule ElixirStateInRust.Map do
+defmodule ElixirStateInRust.ImMap do
   @moduledoc """
   Map interface that stores state in Rust, only support non nested data (so just integer, string, boolean and nil).
 
-  WARNING:
-  This is a mutable state so:
-
-  ```
-  iex> map = ElixirStateInRust.Map.new()
-  iex> map2 = ElixirStateInRust.Map.put(map, :key, "value")
-  iex> map == map2
-  true
-  ```
-
-  Normal Elixir maps this would result in two different maps
+  This clones the data on mutation and stores it in different resource/ under a different reference. This is very slow.
   """
 
   defstruct [:reference]
-  use Rustler, otp_app: :elixir_state_in_rust, crate: "elixir_state_in_rust_map"
+  use Rustler, otp_app: :elixir_state_in_rust, crate: "elixir_state_in_rust_immap"
 
   @opaque t :: %ElixirStateInRust.Map{}
 
@@ -40,29 +30,29 @@ defmodule ElixirStateInRust.Map do
   end
 end
 
-defimpl Enumerable, for: ElixirStateInRust.Map do
+defimpl Enumerable, for: ElixirStateInRust.ImMap do
   def reduce(_list, {:halt, acc}, _fun), do: {:halted, acc}
   def reduce(list, {:suspend, acc}, fun), do: {:suspended, acc, &reduce(list, &1, fun)}
 
   def reduce(data, {:cont, acc}, fun) do
-    if ElixirStateInRust.Map.empty?(data) do
+    if ElixirStateInRust.ImMap.empty?(data) do
       {:done, acc}
     else
-      {head, data} = ElixirStateInRust.Map.pop(data)
+      {head, data} = ElixirStateInRust.ImMap.pop(data)
       reduce(data, fun.(head, acc), fun)
     end
   end
 
-  def count(map), do: {:ok, ElixirStateInRust.Map.len(map)}
-  def member?(map, key), do: {:ok, ElixirStateInRust.Map.contains(map, key)}
+  def count(map), do: {:ok, ElixirStateInRust.ImMap.len(map)}
+  def member?(map, key), do: {:ok, ElixirStateInRust.ImMap.contains(map, key)}
   def slice(_list), do: {:error, __MODULE__}
 end
 
-defimpl Collectable, for: ElixirStateInRust.Map do
+defimpl Collectable, for: ElixirStateInRust.ImMap do
   def into(map) do
     fun = fn
       acc, {:cont, {key, value}} ->
-        ElixirStateInRust.Map.put(acc, key, value)
+        ElixirStateInRust.ImMap.put(acc, key, value)
 
       acc, :done ->
         acc

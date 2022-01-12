@@ -1,0 +1,15 @@
+[package]
+name = "elixir_state_in_rust_immap"
+version = "0.1.0"
+authors = []
+edition = "2018"
+
+[lib]
+name = "elixir_state_in_rust_immap"
+path = "src/lib.rs"
+crate-type = ["cdylib"]
+
+[dependencies]
+rustler = "0.23.0"
+im = "15.0.0"
+shared = { path = "../shared" }

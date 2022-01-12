@@ -1,8 +1,7 @@
-pub mod map;
 use rustler::{Atom, Env, Error, NifResult, Term};
 
 #[derive(Debug, Clone)]
-enum SimpleValue {
+pub enum SimpleValue {
     String(String),
     Integer(i64),
     Bool(bool),
@@ -37,13 +36,13 @@ impl rustler::Encoder for SimpleValue {
 }
 
 #[derive(Debug)]
-enum StringOrAtom {
+pub enum StringOrAtom {
     Atom(String),
     String(String),
 }
 
 impl StringOrAtom {
-    fn to_string(self) -> String {
+    pub fn to_string(self) -> String {
         match self {
             StringOrAtom::Atom(atom) => atom,
             StringOrAtom::String(string) => string,
@@ -71,19 +70,3 @@ impl rustler::Encoder for StringOrAtom {
         }
     }
 }
-
-rustler::init!(
-    "Elixir.ElixirStateInRust.Map",
-    [
-        map::new,
-        map::new_with_list,
-        map::put,
-        map::get,
-        map::is_empty,
-        map::pop,
-        map::len,
-        map::contains,
-        map::clone,
-    ],
-    load = map::load
-);

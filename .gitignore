@@ -24,3 +24,6 @@ elixir_state_in_rust-*.tar
 
 # Temporary files, for example, from tests.
 /tmp/
+
+# Folter containing the compiled shared object / dynamic linked library files
+/priv/native

@@ -22,7 +22,8 @@ defmodule ElixirStateInRust.MixProject do
   defp deps do
     [
       {:rustler, "~> 0.23.0"},
-      {:ex_doc, "~> 0.24", only: :dev, runtime: false}
+      {:ex_doc, "~> 0.24", only: :dev, runtime: false},
+      {:benchee, "~> 1.0", only: :bench}
     ]
   end
 end
